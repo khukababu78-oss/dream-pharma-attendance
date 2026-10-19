@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dream Pharma Attendance</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: phone-first single column. A dashed "slip" header carries the date and clock, four tabs sit in a fixed bottom bar, and the working view scrolls between them. */
+:root{
+  --bg:#EEF3F0; --surface:#FFFFFF; --surface2:#E3ECE8; --ink:#13231D; --muted:#5A6D65; --line:#CDD9D3;
+  --brand:#0B6A55; --brand-ink:#FFFFFF; --brand-soft:#D3EBE2;
+  --ok:#1B7A3E; --ok-bg:#DCF1E2; --late:#8F5200; --late-bg:#FBEACB; --bad:#B02E2E; --bad-bg:#F8DBD8;
+  --f-display:'Bricolage Grotesque','DM Sans',system-ui,sans-serif;
+  --f-body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1613; --surface:#16221D; --surface2:#1E2D26; --ink:#E6F0EB; --muted:#93A89F; --line:#2B3C34;
+    --brand:#3DBE9B; --brand-ink:#06201A; --brand-soft:#17372E;
+    --ok:#5CD48A; --ok-bg:#17331F; --late:#F0B857; --late-bg:#3A2C10; --bad:#F28B82; --bad-bg:#3C1B19;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1613; --surface:#16221D; --surface2:#1E2D26; --ink:#E6F0EB; --muted:#93A89F; --line:#2B3C34;
+  --brand:#3DBE9B; --brand-ink:#06201A; --brand-soft:#17372E;
+  --ok:#5CD48A; --ok-bg:#17331F; --late:#F0B857; --late-bg:#3A2C10; --bad:#F28B82; --bad-bg:#3C1B19;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:8px 110px;
+}
+button,input,select{font:inherit}
+:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+.app{max-width:560px; margin:0 auto; display:flex; flex-direction:column; gap:14px}
+.stack{display:flex; flex-direction:column; gap:12px}
+.small{font-size:13px}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+h2{font-family:var(--f-display); font-size:17px; margin:0; font-weight:700}
+
+.slip{padding:12px 2px 14px; border-bottom:2px dashed var(--line)}
+.slip-top{display:flex; justify-content:space-between; gap:12px; align-items:baseline; flex-wrap:wrap}
+.eyebrow{font-family:var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.clock{font-family:var(--f-mono); font-size:13px; color:var(--brand); font-weight:500}
+.slip-date{font-family:var(--f-display); font-size:30px; line-height:1.1; font-weight:700; margin-top:6px; text-wrap:balance}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px; min-width:0}
+.field{display:flex; flex-direction:column; gap:5px; min-width:0}
+.field>label,.lbl{font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+input,select{color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; width:100%; min-height:44px; min-width:0}
+input[type=checkbox]{width:22px; height:22px; min-height:0; accent-color:var(--brand)}
+.check{display:flex; gap:10px; align-items:flex-start}
+
+.tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.tile{border-radius:12px; padding:12px 14px; background:var(--surface2); min-width:0}
+.tile b{display:block; font-family:var(--f-display); font-size:36px; line-height:1; font-weight:700; font-variant-numeric:tabular-nums}
+.tile span{display:block; margin-top:6px; font-size:11px; letter-spacing:.07em; text-transform:uppercase; opacity:.85}
+.tile.ok{background:var(--ok-bg); color:var(--ok)}
+.tile.late{background:var(--late-bg); color:var(--late)}
+.tile.bad{background:var(--bad-bg); color:var(--bad)}
+
+.btn{display:flex; align-items:center; justify-content:center; gap:8px; min-height:54px; width:100%; border:0; border-radius:12px; background:var(--brand); color:var(--brand-ink); font-weight:600; font-size:16px; cursor:pointer; padding:0 16px; text-decoration:none}
+.btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--line)}
+.btn.danger{background:var(--bad); color:#fff}
+.btn.small{min-height:44px; font-size:14px}
+.btn[disabled]{opacity:.45; cursor:not-allowed}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+
+.chip{display:inline-flex; align-items:center; padding:2px 9px; border-radius:99px; font-size:12px; font-weight:600; white-space:nowrap; background:var(--surface2); color:var(--muted)}
+.chip.ok{background:var(--ok-bg); color:var(--ok)}
+.chip.late{background:var(--late-bg); color:var(--late)}
+.chip.bad{background:var(--bad-bg); color:var(--bad)}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+
+.preview img{width:100%; max-height:300px; object-fit:cover; border-radius:10px; display:block; background:var(--surface2)}
+.notice{border-radius:10px; padding:10px 12px; background:var(--late-bg); color:var(--late); font-size:14px}
+
+.list>.rec{display:grid; grid-template-columns:70px minmax(0,1fr) auto; gap:10px; align-items:center; padding:12px 0; border-top:1px solid var(--line)}
+.list>.rec:first-child{border-top:0}
+.rec .day{font-family:var(--f-display); font-weight:700; font-size:15px; line-height:1.15}
+.rec .day small{display:block; font-family:var(--f-body); font-weight:400; color:var(--muted); font-size:12px}
+.rec.absent{opacity:.8}
+.thumbs{display:flex; gap:6px}
+.thumbs button{padding:0; border:0; background:none; cursor:pointer}
+.thumbs img{width:48px; height:48px; object-fit:cover; border-radius:8px; display:block}
+a{color:var(--brand)}
+
+.monthnav{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.monthnav button{width:44px; height:44px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:18px; cursor:pointer}
+.monthnav button[disabled]{opacity:.35}
+.monthnav strong{font-family:var(--f-display); font-size:17px}
+
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse; width:100%; min-width:420px}
+th,td{padding:9px 8px; text-align:right; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; white-space:nowrap}
+th:first-child,td:first-child{text-align:left; white-space:normal}
+th{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600}
+
+.staffrow{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line)}
+.staffrow:first-child{border-top:0}
+.staffrow .btn{width:auto; min-height:40px; font-size:13px; padding:0 12px}
+
+nav.tabs{position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--surface); border-top:1px solid var(--line);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+nav .in{max-width:560px; margin:0 auto; display:grid; grid-template-columns:repeat(5,1fr); gap:2px}
+nav button{border:0; background:none; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px; border-radius:10px; font-size:11px; font-weight:600; min-height:52px; cursor:pointer}
+nav button[aria-current=page]{color:var(--brand); background:var(--brand-soft)}
+
+.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom,0px)); background:var(--ink); color:var(--bg); padding:10px 14px; border-radius:10px; font-size:14px; z-index:30; max-width:calc(100% - 32px); text-align:center}
+#lb{position:fixed; inset:0; background:rgba(0,0,0,.88); display:flex; align-items:center; justify-content:center; z-index:40; cursor:zoom-out}
+#lb img{max-width:94%; max-height:86%; border-radius:10px}
+
+.net{font-family:var(--f-display); font-size:26px; font-weight:700; color:var(--brand); font-variant-numeric:tabular-nums}
+table.sal{min-width:0}
+table.sal td:last-child{font-family:var(--f-mono)}
+
+[hidden]{display:none!important}
+img{max-width:100%}
+</style>
+
+</head>
+<body>
+<div class="app" id="view"></div>
+<nav class="tabs" id="tabs" aria-label="Sections"><div class="in" id="tabsIn"></div></nav>
+<div id="toast" class="toast" hidden></div>
+<div id="lb" hidden><img id="lbImg" alt="Attendance photo"></div>
+<input type="file" id="cam" accept="image/*" capture="user" hidden>
+
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,signInAnonymously,signInWithEmailAndPassword,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {getFirestore,doc,getDoc,setDoc,updateDoc,deleteDoc,collection,getDocs,query,where,serverTimestamp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+/* ============ 1. PASTE YOUR FIREBASE CONFIG HERE ============
+   Firebase console > Project settings > Your apps > Web app > Config */
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyB-u8fpogLuF3_akunDZvcQCxofPVKmDOc',
+  authDomain: 'dream-pharma-attendance-bf9dd.firebaseapp.com',
+  projectId: 'dream-pharma-attendance-bf9dd',
+  appId: '1:365342783951:web:70f67a32687082edea3aba'
+};
+/* ============================================================ */
+
+var TZ='Asia/Dhaka';
+var DEFAULTS={place:'Dream Pharma, Kishoreganj Sadar',lat:null,lng:null,radius:100,open:'09:00',grace:10,off:5,needLoc:false,lateCutEvery:3};
+var configured=FIREBASE_CONFIG.apiKey.indexOf('PASTE')!==0;
+var app,auth,db;
+
+var state={sel:'',staff:[],records:[],adj:{}};
+try{ state.sel=localStorage.getItem('dp.sel')||''; }catch(e){}
+var S=Object.assign({},DEFAULTS);
+
+var view='home', pending=null, pendingKind='in', confirmDel=null;
+var vm={y:0,m:0}, loadedKey='', isAdmin=false, ready=false, loading=false, authErr='';
+
+/* ---------- helpers ---------- */
+function pad(n){ return String(n).padStart(2,'0'); }
+function nowParts(d){
+  var p=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d||new Date());
+  var o={}; p.forEach(function(x){o[x.type]=x.value;});
+  return {y:+o.year,m:+o.month,d:+o.day,hh:+o.hour,mm:+o.minute,date:o.year+'-'+o.month+'-'+o.day};
+}
+function ymd(y,m,d){ return y+'-'+pad(m)+'-'+pad(d); }
+function daysIn(y,m){ return new Date(Date.UTC(y,m,0)).getUTCDate(); }
+function dow(y,m,d){ return new Date(Date.UTC(y,m-1,d)).getUTCDay(); }
+function fmtTime(iso){ return new Date(iso).toLocaleTimeString('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}); }
+function fmtMonth(y,m){ return new Date(Date.UTC(y,m-1,1)).toLocaleDateString('en-GB',{timeZone:'UTC',month:'long',year:'numeric'}); }
+function minsOf(iso){ var p=nowParts(new Date(iso)); return p.hh*60+p.mm; }
+function toMin(hhmm){ var a=String(hhmm).split(':'); return (+a[0])*60+(+a[1]||0); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function uid(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+function dist(a,b,c,d){
+  var R=6371000, r=Math.PI/180, dl=(c-a)*r, dg=(d-b)*r;
+  var x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dg/2)*Math.sin(dg/2);
+  return Math.round(2*R*Math.asin(Math.sqrt(x)));
+}
+async function sha(t){
+  var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('dreampharma:'+t));
+  return Array.from(new Uint8Array(b)).map(function(x){return pad(x.toString(16));}).join('');
+}
+function staffById(id){ for(var i=0;i<state.staff.length;i++) if(state.staff[i].id===id) return state.staff[i]; return null; }
+function curStaff(){ return staffById(state.sel)||state.staff[0]||null; }
+function rec(sid,date){ for(var i=0;i<state.records.length;i++){ var r=state.records[i]; if(r.sid===sid&&r.date===date) return r; } return null; }
+function toast(msg){
+  var t=document.getElementById('toast'); t.textContent=msg; t.hidden=false;
+  clearTimeout(toast._t); toast._t=setTimeout(function(){t.hidden=true;},3000);
+}
+function fbErr(e){
+  var c=(e&&e.code)||'';
+  if(c.indexOf('permission-denied')>=0) return 'Not allowed. Check your Firestore rules.';
+  if(c.indexOf('unavailable')>=0||c.indexOf('network')>=0) return 'No internet connection. Try again.';
+  return 'Something went wrong. Try again.';
+}
+
+function monthStats(sid,y,m){
+  var t=nowParts(), last=daysIn(y,m);
+  var cur=(y===t.y&&m===t.m), future=(y>t.y||(y===t.y&&m>t.m));
+  var upto=future?0:(cur?t.d:last);
+  var work=0,present=0,late=0,lateMin=0,absent=0;
+  for(var d=1;d<=upto;d++){
+    var off=(dow(y,m,d)===+S.off), r=rec(sid,ymd(y,m,d));
+    if(r){ present++; if(r.late){late++; lateMin+=r.lateMin||0;} }
+    if(off) continue;
+    work++;
+    if(!r && !(cur&&d===t.d)) absent++;
+  }
+  return {work:work,present:present,late:late,lateMin:lateMin,absent:absent,upto:upto};
+}
+
+/* ---------- Firebase data ---------- */
+async function loadMeta(){
+  var snap=await getDocs(collection(db,'staff'));
+  state.staff=[]; snap.forEach(function(d){ state.staff.push(Object.assign({id:d.id},d.data())); });
+  state.staff.sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+  if(!staffById(state.sel)) state.sel=state.staff[0]?state.staff[0].id:'';
+  var s=await getDoc(doc(db,'settings','main'));
+  S=Object.assign({},DEFAULTS,s.exists()?s.data():{});
+}
+async function loadRecords(){
+  if(!ready) return;
+  var y=vm.y, m=vm.m, last=daysIn(y,m), t=nowParts(), st=curStaff();
+  var key=y+'-'+m+'-'+(isAdmin?'*':(st?st.id:''));
+  loadedKey=key; loading=true; render();
+  try{
+    var recs=[], adjMap={};
+    if(isAdmin){
+      var asn=await getDocs(query(collection(db,'adjust'),where('ym','==',y+'-'+pad(m))));
+      asn.forEach(function(d){ var v=d.data(); adjMap[v.sid]=v; });
+      var snap=await getDocs(query(collection(db,'attendance'),where('date','>=',ymd(y,m,1)),where('date','<=',ymd(y,m,last))));
+      snap.forEach(function(d){ recs.push(Object.assign({id:d.id},d.data())); });
+    }else if(st){
+      var upto=(y===t.y&&m===t.m)?t.d:((y<t.y||(y===t.y&&m<t.m))?last:0), ps=[];
+      for(var d=1;d<=upto;d++) ps.push(getDoc(doc(db,'attendance',ymd(y,m,d)+'_'+st.id)));
+      (await Promise.all(ps)).forEach(function(s){ if(s.exists()) recs.push(Object.assign({id:s.id},s.data())); });
+    }
+    if(loadedKey===key){ state.records=recs; state.adj=adjMap; }
+  }catch(e){ toast(fbErr(e)); }
+  loading=false; render();
+}
+function keyNow(){ var st=curStaff(); return vm.y+'-'+vm.m+'-'+(isAdmin?'*':(st?st.id:'')); }
+function ensureLoaded(){ if(ready&&keyNow()!==loadedKey) loadRecords(); else render(); }
+function goCurrentMonth(){ var t=nowParts(); vm.y=t.y; vm.m=t.m; }
+
+/* ---------- photo + location ---------- */
+function shrink(file,label){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      var max=300, s=Math.min(1,max/Math.max(img.width,img.height));
+      var c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
+      var x=c.getContext('2d'); x.drawImage(img,0,0,c.width,c.height);
+      x.fillStyle='rgba(0,0,0,.6)'; x.fillRect(0,c.height-24,c.width,24);
+      x.fillStyle='#fff'; x.font='12px sans-serif'; x.fillText(label,6,c.height-8,c.width-12);
+      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg',0.55));
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error('image')); };
+    img.src=url;
+  });
+}
+function getPos(){
+  return new Promise(function(res,rej){
+    try{
+      if(!navigator.geolocation) return rej({code:0});
+      navigator.geolocation.getCurrentPosition(function(p){
+        res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)});
+      },function(e){ rej(e||{code:0}); },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+    }catch(e){ rej({code:0}); }
+  });
+}
+function errMsg(e){
+  var c=e&&e.code;
+  if(c===1) return 'Location permission was denied. Allow location for this site, then retry.';
+  if(c===2) return 'Location is not available. Turn on GPS, then retry.';
+  if(c===3) return 'Location timed out. Move near a window or outside, then retry.';
+  return 'Could not read your location. Open this page in your phone browser and retry.';
+}
+function fetchLoc(){
+  if(!pending) return Promise.resolve();
+  pending.busy='loc'; pending.err=''; render();
+  return getPos().then(function(p){
+    if(!pending) return;
+    pending.loc=p; pending.d=(S.lat!=null)?dist(p.lat,p.lng,S.lat,S.lng):null; pending.busy=''; render();
+  }).catch(function(e){
+    if(!pending) return;
+    pending.loc=null; pending.d=null; pending.err=errMsg(e); pending.busy=''; render();
+  });
+}
+function onPhoto(inp){
+  var f=inp.files&&inp.files[0]; inp.value='';
+  if(!f) return;
+  var st=curStaff(), t=nowParts();
+  var label=st.name+'  '+t.date+' '+pad(t.hh)+':'+pad(t.mm);
+  pending={kind:pendingKind,photo:null,loc:null,d:null,err:'',busy:'photo'}; render();
+  shrink(f,label).then(function(photo){
+    if(!pending) return; pending.photo=photo; return fetchLoc();
+  }).catch(function(){ pending=null; render(); toast('Could not read that photo. Try again.'); });
+}
+
+/* ---------- submit ---------- */
+async function submit(){
+  var p=pending, st=curStaff(); if(!p||!st||p.busy||p.saving) return;
+  if(S.needLoc && !p.loc){ toast('Location is required. Retry location first.'); return; }
+  p.saving=true; render();
+  var now=new Date(), iso=now.toISOString(), date=nowParts(now).date, id=date+'_'+st.id;
+  var loc=p.loc?{lat:p.loc.lat,lng:p.loc.lng,acc:p.loc.acc,d:p.d}:null;
+  try{
+    if(p.kind==='in'){
+      var ex=await getDoc(doc(db,'attendance',id));
+      if(ex.exists()){ pending=null; toast('Already checked in today.'); await loadRecords(); return; }
+      var open=toMin(S.open), mins=minsOf(iso), isLate=mins>open+Number(S.grace||0);
+      var r={sid:st.id,date:date,inAt:iso,inPhoto:p.photo,inLoc:loc,late:isLate,lateMin:isLate?mins-open:0,outAt:null,outPhoto:null,outLoc:null};
+      await setDoc(doc(db,'attendance',id),Object.assign({serverAt:serverTimestamp()},r));
+      state.records.push(Object.assign({id:id},r));
+    }else{
+      var cur=rec(st.id,date); if(!cur){ pending=null; toast('No check-in found for today.'); render(); return; }
+      var patch={outAt:iso,outPhoto:p.photo,outLoc:loc};
+      await updateDoc(doc(db,'attendance',id),patch);
+      Object.assign(cur,patch);
+    }
+    var kind=p.kind; pending=null;
+    toast(kind==='in'?'Checked in. Have a good shift.':'Checked out. See you tomorrow.');
+  }catch(e){ p.saving=false; toast(fbErr(e)); }
+  render();
+}
+
+/* ---------- views ---------- */
+var IC={
+  cam:'<path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  list:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  coin:'<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c0-1 1-1.5 2.5-1.5s2.5.6 2.5 1.7c0 2.3-5 1.3-5 3.6 0 1.1 1 1.7 2.5 1.7s2.5-.5 2.5-1.5"/>',
+  chart:'<path d="M5 20V11M12 20V4M19 20v-6M3 20h18"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>'
+};
+function ic(n){ return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[n]+'</svg>'; }
+var TABS=[{id:'home',label:'Check in',ic:'cam'},{id:'details',label:'Details',ic:'list'},{id:'summary',label:'Summary',ic:'chart'},{id:'salary',label:'Salary',ic:'coin'},{id:'settings',label:'Settings',ic:'gear'}];
+function clockStr(){ return new Date().toLocaleTimeString('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}); }
+
+function header(){
+  var t=nowParts(), dt=new Date(Date.UTC(t.y,t.m-1,t.d));
+  var dstr=dt.toLocaleDateString('en-GB',{timeZone:'UTC',weekday:'short',day:'numeric',month:'long'});
+  var h='<header class="slip"><div class="slip-top"><span class="eyebrow">'+esc(S.place||'Dream Pharma')+'</span><span class="clock" id="clock">'+clockStr()+'</span></div><div class="slip-date">'+esc(dstr)+'</div></header>';
+  if(ready&&(view==='home'||view==='details')&&state.staff.length){
+    var opts=state.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(s.id===state.sel?' selected':'')+'>'+esc(s.name)+(s.role?' · '+esc(s.role):'')+'</option>'; }).join('');
+    h+='<div class="field"><label for="staffSel">Staff member</label><select id="staffSel">'+opts+'</select></div>';
+  }
+  return h;
+}
+function tiles(st,y,m){
+  var s=monthStats(st.id,y,m);
+  return '<div class="tiles">'+
+    '<div class="tile"><b>'+s.work+'</b><span>Working days</span></div>'+
+    '<div class="tile ok"><b>'+s.present+'</b><span>Present</span></div>'+
+    '<div class="tile late"><b>'+s.late+'</b><span>Late</span></div>'+
+    '<div class="tile bad"><b>'+s.absent+'</b><span>Absent</span></div></div>';
+}
+function locChip(loc){
+  if(!loc) return '<span class="chip late">No location</span>';
+  if(loc.d==null) return '<span class="chip">Location saved</span>';
+  if(loc.d>Number(S.radius)) return '<span class="chip bad">Outside shop · '+loc.d+' m</span>';
+  return '<span class="chip ok">At shop · '+loc.d+' m</span>';
+}
+function graceStr(){
+  var m=toMin(S.open)+Number(S.grace||0), h=Math.floor(m/60)%24, mi=m%60;
+  return new Date(Date.UTC(2000,0,1,h,mi)).toLocaleTimeString('en-US',{timeZone:'UTC',hour:'numeric',minute:'2-digit'});
+}
+
+function setupCard(){
+  return '<section class="card stack"><h2>One setup step left</h2><div class="muted">Open this file in a text editor and paste your Firebase web app config near the top (the block marked PASTE YOUR FIREBASE CONFIG HERE). Then upload it again.</div></section>';
+}
+function loginCard(){
+  return '<section class="card stack"><h2>Admin sign in</h2><div class="muted small">Only the shop owner needs this. Staff do not sign in.</div>'+
+    '<div class="field"><label for="adEmail">Email</label><input id="adEmail" type="email" autocomplete="username"></div>'+
+    '<div class="field"><label for="adPass">Password</label><input id="adPass" type="password" autocomplete="current-password"></div>'+
+    (authErr?'<div class="notice">'+esc(authErr)+'</div>':'')+
+    '<button class="btn" data-act="login">Sign in</button></section>';
+}
+
+function viewHome(){
+  var st=curStaff();
+  if(!state.staff.length) return '<div class="card">No staff yet. The admin can add staff in Settings.</div>';
+  var t=nowParts(), r=rec(st.id,t.date), out='';
+  out+='<div class="muted small">'+esc(fmtMonth(t.y,t.m))+' so far</div>'+tiles(st,t.y,t.m);
+
+  if(pending){
+    var k=pending.kind==='in'?'Check in':'Check out';
+    out+='<section class="card stack"><h2>Confirm '+k.toLowerCase()+'</h2>';
+    if(pending.busy==='photo') out+='<div class="muted">Processing photo…</div>';
+    if(pending.photo) out+='<div class="preview"><img src="'+pending.photo+'" alt="Your photo"></div>';
+    if(pending.busy==='loc') out+='<div class="muted">Reading your location…</div>';
+    if(!pending.busy){
+      if(pending.loc){
+        out+='<div class="chips">'+locChip({d:pending.d})+'<span class="chip mono">±'+pending.loc.acc+' m accuracy</span></div>';
+        if(pending.d==null) out+='<div class="muted small">The shop location is not set yet, so distance cannot be checked. Ask the admin to set it in Settings.</div>';
+      }else{
+        out+='<div class="notice">'+esc(pending.err)+'</div>';
+      }
+    }
+    out+='<div class="row2"><button class="btn ghost small" data-act="retake">Retake photo</button><button class="btn ghost small" data-act="relocate"'+(pending.busy?' disabled':'')+'>Retry location</button></div>';
+    out+='<button class="btn" data-act="submit"'+((pending.busy||pending.saving||!pending.photo||(S.needLoc&&!pending.loc))?' disabled':'')+'>'+(pending.saving?'Saving…':'Submit '+k.toLowerCase())+'</button>';
+    out+='<button class="btn ghost small" data-act="cancel"'+(pending.saving?' disabled':'')+'>Cancel</button></section>';
+    return out;
+  }
+
+  out+='<section class="card stack">';
+  if(loading){
+    out+='<div class="muted">Loading today…</div>';
+  }else if(!r){
+    out+='<h2>Not checked in today</h2><div class="muted small">Shift starts '+esc(S.open)+'. You are on time until '+graceStr()+'.</div>';
+    if(st.pinHash) out+='<div class="field"><label for="staffPin">Your PIN</label><input id="staffPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div>';
+    out+='<button class="btn" data-act="start" data-kind="in">'+ic('cam')+' Take selfie and check in</button>';
+  }else if(!r.outAt){
+    out+='<div class="chips"><span class="chip '+(r.late?'late':'ok')+'">'+(r.late?'Late '+r.lateMin+' min':'On time')+'</span>'+locChip(r.inLoc)+'</div>';
+    out+='<h2>Checked in at '+fmtTime(r.inAt)+'</h2>';
+    if(st.pinHash) out+='<div class="field"><label for="staffPin">Your PIN</label><input id="staffPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div>';
+    out+='<button class="btn" data-act="start" data-kind="out">'+ic('cam')+' Take selfie and check out</button>';
+  }else{
+    var mins=Math.max(0,Math.round((new Date(r.outAt)-new Date(r.inAt))/60000));
+    out+='<h2>Done for today</h2><div class="mono">In '+fmtTime(r.inAt)+' · Out '+fmtTime(r.outAt)+'</div>';
+    out+='<div class="muted small">Time on shift: '+Math.floor(mins/60)+' h '+pad(mins%60)+' min</div>';
+  }
+  out+='</section>';
+  return out;
+}
+
+function monthNav(){
+  var t=nowParts(), atMax=(vm.y>t.y||(vm.y===t.y&&vm.m>=t.m));
+  return '<div class="monthnav"><button data-act="mprev" aria-label="Previous month">‹</button><strong>'+esc(fmtMonth(vm.y,vm.m))+'</strong><button data-act="mnext" aria-label="Next month"'+(atMax?' disabled':'')+'>›</button></div>';
+}
+function thumb(r,w){
+  var src=r[w+'Photo']; if(!src) return '';
+  return '<button data-act="zoom" data-rid="'+esc(r.id)+'" data-w="'+w+'" aria-label="Open '+w+' photo"><img src="'+src+'" alt=""></button>';
+}
+function mapLink(loc){ return loc?'<a href="https://www.google.com/maps?q='+loc.lat+','+loc.lng+'" target="_blank" rel="noopener">Map</a>':''; }
+
+function viewDetails(){
+  var st=curStaff();
+  if(!st) return '<div class="card">No staff yet. The admin can add staff in Settings.</div>';
+  var s=monthStats(st.id,vm.y,vm.m), out=monthNav()+tiles(st,vm.y,vm.m), tn=nowParts();
+  if(loading) return out+'<div class="card muted">Loading…</div>';
+  var rows='';
+  for(var d=s.upto; d>=1; d--){
+    var date=ymd(vm.y,vm.m,d), r=rec(st.id,date), off=(dow(vm.y,vm.m,d)===+S.off);
+    var dt=new Date(Date.UTC(vm.y,vm.m-1,d)), wk=dt.toLocaleDateString('en-GB',{timeZone:'UTC',weekday:'short'});
+    var day='<div class="day">'+d+' '+dt.toLocaleDateString('en-GB',{timeZone:'UTC',month:'short'})+'<small>'+wk+'</small></div>';
+    if(r){
+      rows+='<div class="rec">'+day+'<div class="stack" style="gap:6px"><div class="mono small">In '+fmtTime(r.inAt)+' · Out '+(r.outAt?fmtTime(r.outAt):'—')+'</div><div class="chips"><span class="chip '+(r.late?'late':'ok')+'">'+(r.late?'Late '+r.lateMin+' min':'On time')+'</span>'+locChip(r.inLoc)+'</div><div class="small">'+mapLink(r.inLoc)+'</div></div><div class="thumbs">'+thumb(r,'in')+thumb(r,'out')+'</div></div>';
+    }else if(off){
+      rows+='<div class="rec absent">'+day+'<div class="muted small">Weekly off</div><span></span></div>';
+    }else if(vm.y===tn.y&&vm.m===tn.m&&d===tn.d){
+      rows+='<div class="rec">'+day+'<div class="muted small">Today, not checked in yet</div><span></span></div>';
+    }else{
+      rows+='<div class="rec absent">'+day+'<div><span class="chip bad">Absent</span></div><span></span></div>';
+    }
+  }
+  return out+'<section class="card"><div class="list">'+(rows||'<div class="muted">No days to show for this month yet.</div>')+'</div></section>';
+}
+
+function viewSummary(){
+  if(!isAdmin) return loginCard();
+  var t=nowParts(), out='';
+  if(loading) return monthNav()+'<div class="card muted">Loading…</div>';
+  if(vm.y===t.y&&vm.m===t.m){
+    var roll=state.staff.map(function(s){
+      var r=rec(s.id,t.date), chip;
+      if(!r) chip='<span class="chip">Not in yet</span>';
+      else if(r.outAt) chip='<span class="chip ok">Out '+fmtTime(r.outAt)+'</span>';
+      else chip='<span class="chip '+(r.late?'late':'ok')+'">'+(r.late?'Late · ':'In ')+fmtTime(r.inAt)+'</span>';
+      return '<div class="staffrow"><div><strong>'+esc(s.name)+'</strong><div class="muted small">'+esc(s.role)+'</div></div>'+chip+'</div>';
+    }).join('');
+    out+='<section class="card"><h2 style="margin-bottom:6px">Today</h2>'+(roll||'<div class="muted">No staff yet.</div>')+'</section>';
+  }
+  var body=state.staff.map(function(s){
+    var m=monthStats(s.id,vm.y,vm.m);
+    return '<tr><td><strong>'+esc(s.name)+'</strong></td><td>'+m.work+'</td><td>'+m.present+'</td><td>'+m.late+'</td><td>'+m.absent+'</td><td>'+m.lateMin+'</td></tr>';
+  }).join('');
+  out+=monthNav()+'<section class="card"><div class="tablewrap"><table><thead><tr><th>Staff</th><th>Days</th><th>Present</th><th>Late</th><th>Absent</th><th>Late min</th></tr></thead><tbody>'+body+'</tbody></table></div></section>';
+  return out;
+}
+
+function viewSettings(){
+  if(!isAdmin) return loginCard();
+  var shop=(S.lat!=null)?'<div class="mono small">'+S.lat.toFixed(5)+', '+S.lng.toFixed(5)+' · <a href="https://www.google.com/maps?q='+S.lat+','+S.lng+'" target="_blank" rel="noopener">Open map</a></div>':'<div class="muted small">Not set yet. Stand inside the shop and tap the button.</div>';
+  var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(function(n,i){ return '<option value="'+i+'"'+(i===+S.off?' selected':'')+'>'+n+'</option>'; }).join('');
+  var o='';
+  o+='<section class="card stack"><h2>Shop and rules</h2>'+
+    '<div class="field"><label for="f-place">Shop name</label><input id="f-place" data-set="place" value="'+esc(S.place)+'"></div>'+
+    shop+'<button class="btn small" data-act="setshop">Use my current location as the shop</button>'+
+    '<div class="row2"><div class="field"><label for="f-radius">Allowed radius (m)</label><input id="f-radius" type="number" min="10" step="10" data-set="radius" value="'+esc(S.radius)+'"></div>'+
+    '<div class="field"><label for="f-open">Shift starts</label><input id="f-open" type="time" data-set="open" value="'+esc(S.open)+'"></div></div>'+
+    '<div class="row2"><div class="field"><label for="f-grace">Grace (min)</label><input id="f-grace" type="number" min="0" step="5" data-set="grace" value="'+esc(S.grace)+'"></div>'+
+    '<div class="field"><label for="f-off">Weekly off</label><select id="f-off" data-set="off">'+days+'</select></div></div>'+
+    '<div class="field"><label for="f-latecut">Late days that cost 1 day of pay (0 = off)</label><input id="f-latecut" type="number" min="0" step="1" data-set="lateCutEvery" value="'+esc(S.lateCutEvery)+'"></div>'+
+    '<label class="check"><input type="checkbox" id="f-needloc" data-set="needLoc"'+(S.needLoc?' checked':'')+'><span>Require location to check in<br><span class="muted small">Staff cannot submit without a GPS fix.</span></span></label></section>';
+
+  var list=state.staff.map(function(s){
+    var armed=(confirmDel===s.id);
+    return '<div class="staffrow" style="flex-wrap:wrap"><div style="flex:1;min-width:140px"><strong>'+esc(s.name)+'</strong><div class="muted small">'+esc(s.role)+(s.pinHash?' · PIN set':'')+'</div></div><button class="btn '+(armed?'danger':'ghost')+'" data-act="delstaff" data-id="'+esc(s.id)+'">'+(armed?'Tap to confirm':'Remove')+'</button><div class="field" style="flex-basis:100%"><label for="sal-'+esc(s.id)+'">Monthly salary (৳)</label><input id="sal-'+esc(s.id)+'" type="number" min="0" step="100" inputmode="numeric" data-sal="'+esc(s.id)+'" value="'+esc(s.salary||'')+'"></div></div>';
+  }).join('');
+  o+='<section class="card stack"><h2>Staff</h2><div>'+(list||'<div class="muted">No staff yet. Add your first team member below.</div>')+'</div>'+
+    '<div class="field"><label for="newName">Name</label><input id="newName" autocomplete="off"></div>'+
+    '<div class="row2"><div class="field"><label for="newRole">Role</label><input id="newRole" autocomplete="off"></div><div class="field"><label for="newPin">PIN (optional)</label><input id="newPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
+    '<div class="field"><label for="newSal">Monthly salary (৳)</label><input id="newSal" type="number" min="0" step="100" inputmode="numeric"></div>'+
+    '<button class="btn small" data-act="addstaff">Add staff member</button></section>';
+
+  o+='<section class="card stack"><h2>Data</h2><div class="muted small">Showing '+esc(fmtMonth(vm.y,vm.m))+'. Use the month arrows in Summary to change it.</div>'+
+    '<button class="btn small" data-act="export">Export this month (CSV)</button>'+
+    '<button class="btn ghost small" data-act="logout">Sign out</button></section>';
+  return o;
+}
+
+function money(n){ return '৳'+Math.round(n).toLocaleString('en-US'); }
+function trow(a,b){ return '<tr><td>'+a+'</td><td>'+b+'</td></tr>'; }
+function workDaysFull(y,m){ var n=0,l=daysIn(y,m); for(var d=1;d<=l;d++) if(dow(y,m,d)!==+S.off) n++; return n||1; }
+function pay(st,y,m){
+  var ms=monthStats(st.id,y,m), base=Number(st.salary)||0, wd=workDaysFull(y,m), daily=base/wd;
+  var every=Number(S.lateCutEvery)||0, lateDays=every?Math.floor(ms.late/every):0;
+  var a=state.adj[st.id]||{}, bonus=Number(a.bonus)||0, adv=Number(a.advance)||0;
+  var absentCut=ms.absent*daily, lateCut=lateDays*daily;
+  return {ms:ms,base:base,wd:wd,daily:daily,lateDays:lateDays,absentCut:absentCut,lateCut:lateCut,bonus:bonus,adv:adv,note:a.note||'',net:Math.max(0,base-absentCut-lateCut+bonus-adv)};
+}
+function viewSalary(){
+  if(!isAdmin) return loginCard();
+  var t=nowParts(), cur=(vm.y===t.y&&vm.m===t.m);
+  if(loading) return monthNav()+'<div class="card muted">Loading…</div>';
+  if(!state.staff.length) return monthNav()+'<div class="card muted">No staff yet. Add staff in Settings.</div>';
+  var total=0;
+  var cards=state.staff.map(function(s){
+    var p=pay(s,vm.y,vm.m), id=esc(s.id); total+=p.net;
+    return '<section class="card stack"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><div><strong>'+esc(s.name)+'</strong><div class="muted small">'+esc(s.role)+'</div></div><div class="net mono">'+money(p.net)+'</div></div>'+
+      (p.base?'':'<div class="notice no-print">No monthly salary set. Add it in Settings.</div>')+
+      '<table class="sal"><tbody>'+
+      trow('Monthly salary',money(p.base))+
+      trow('Per day ('+p.wd+' working days)',money(p.daily))+
+      trow('Present / Late / Absent',p.ms.present+' / '+p.ms.late+' / '+p.ms.absent)+
+      trow('Absent cut ('+p.ms.absent+' day)','− '+money(p.absentCut))+
+      trow('Late cut ('+p.lateDays+' day)','− '+money(p.lateCut))+
+      trow('Bonus','+ '+money(p.bonus))+
+      trow('Advance / other cut','− '+money(p.adv))+
+      '</tbody></table>'+
+      '<div class="row2 no-print"><div class="field"><label for="b-'+id+'">Bonus (৳)</label><input id="b-'+id+'" type="number" min="0" inputmode="numeric" data-adj="'+id+'|bonus" value="'+(p.bonus||'')+'"></div>'+
+      '<div class="field"><label for="a-'+id+'">Advance / other cut (৳)</label><input id="a-'+id+'" type="number" min="0" inputmode="numeric" data-adj="'+id+'|advance" value="'+(p.adv||'')+'"></div></div>'+
+      '<div class="field no-print"><label for="n-'+id+'">Note</label><input id="n-'+id+'" data-adj="'+id+'|note" value="'+esc(p.note)+'"></div>'+
+      (p.note?'<div class="small print-only">Note: '+esc(p.note)+'</div>':'')+
+      '</section>';
+  }).join('');
+  var every=Number(S.lateCutEvery)||0;
+  return monthNav()+
+    '<section class="card stack"><div class="lbl">Total payable · '+esc(fmtMonth(vm.y,vm.m))+'</div><div class="net mono">'+money(total)+'</div>'+
+    '<div class="muted small">Absent days are cut at one day of pay each'+(every?'; every '+every+' late days cut one more day':'')+'.'+(cur?' This month is still running, so only absences up to today are counted.':'')+'</div>'+
+    '<div class="row2 no-print"><button class="btn small" data-act="salcsv">Export CSV</button><button class="btn ghost small" data-act="print">Print</button></div></section>'+cards;
+}
+function salaryCsv(){
+  var rows=[['Staff','Role','Monthly salary','Present','Late','Absent','Absent cut','Late cut','Bonus','Advance / other cut','Net pay','Note']];
+  state.staff.forEach(function(s){ var p=pay(s,vm.y,vm.m); rows.push([s.name,s.role,p.base,p.ms.present,p.ms.late,p.ms.absent,Math.round(p.absentCut),Math.round(p.lateCut),p.bonus,p.adv,Math.round(p.net),p.note]); });
+  return '\ufeff'+rows.map(function(r){ return r.map(q).join(','); }).join('\r\n');
+}
+function download(name,text){
+  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));
+  a.download=name; document.body.appendChild(a); a.click(); a.remove();
+}
+
+function render(){
+  var body;
+  if(!configured) body=setupCard();
+  else if(!ready) body='<div class="card muted">Connecting…</div>';
+  else if(view==='home') body=viewHome();
+  else if(view==='details') body=viewDetails();
+  else if(view==='summary') body=viewSummary();
+  else if(view==='salary') body=viewSalary();
+  else body=viewSettings();
+  document.getElementById('view').innerHTML=header()+body;
+  document.getElementById('tabsIn').innerHTML=TABS.map(function(t){
+    return '<button data-act="tab" data-v="'+t.id+'"'+(t.id===view?' aria-current="page"':'')+'>'+ic(t.ic)+'<span>'+t.label+'</span></button>';
+  }).join('');
+}
+
+/* ---------- export ---------- */
+function q(v){ v=String(v==null?'':v); return '"'+v.replace(/"/g,'""')+'"'; }
+function csv(){
+  var rows=[['Date','Staff','Role','Check in','Check out','Late (min)','In latitude','In longitude','In distance (m)','Out latitude','Out longitude','Out distance (m)']];
+  state.records.slice().sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; }).forEach(function(r){
+    var s=staffById(r.sid)||{name:'(removed)',role:''}, i=r.inLoc||{}, o=r.outLoc||{};
+    rows.push([r.date,s.name,s.role,fmtTime(r.inAt),r.outAt?fmtTime(r.outAt):'',r.lateMin||0,i.lat==null?'':i.lat,i.lng==null?'':i.lng,i.d==null?'':i.d,o.lat==null?'':o.lat,o.lng==null?'':o.lng,o.d==null?'':o.d]);
+  });
+  return '﻿'+rows.map(function(r){ return r.map(q).join(','); }).join('\r\n');
+}
+
+/* ---------- actions ---------- */
+async function act(name,el){
+  var st=curStaff();
+  switch(name){
+    case 'tab':
+      view=el.dataset.v; pending=null; confirmDel=null;
+      if(view==='home') goCurrentMonth();
+      ensureLoaded(); window.scrollTo(0,0); break;
+    case 'start':
+      if(st&&st.pinHash){
+        var pv=document.getElementById('staffPin');
+        if(!pv||(await sha(pv.value))!==st.pinHash){ toast('Wrong PIN.'); return; }
+      }
+      pendingKind=el.dataset.kind; document.getElementById('cam').click(); break;
+    case 'retake': document.getElementById('cam').click(); break;
+    case 'relocate': fetchLoc(); break;
+    case 'cancel': pending=null; render(); break;
+    case 'submit': submit(); break;
+    case 'mprev': vm.m--; if(vm.m<1){vm.m=12;vm.y--;} ensureLoaded(); break;
+    case 'mnext': vm.m++; if(vm.m>12){vm.m=1;vm.y++;} ensureLoaded(); break;
+    case 'login':
+      authErr='';
+      try{ await signInWithEmailAndPassword(auth,document.getElementById('adEmail').value.trim(),document.getElementById('adPass').value); }
+      catch(e){ authErr='Wrong email or password.'; render(); } break;
+    case 'logout': await signOut(auth); view='home'; break;
+    case 'addstaff':
+      var nm=document.getElementById('newName').value.trim(), rl=document.getElementById('newRole').value.trim(), pn=document.getElementById('newPin').value.trim();
+      if(!nm){ toast('Enter a name.'); return; }
+      if(pn&&!/^\d{4}$/.test(pn)){ toast('Staff PIN must be 4 digits.'); return; }
+      try{
+        var id=uid(), data={name:nm,role:rl,salary:Number(document.getElementById('newSal').value)||0,pinHash:pn?await sha(pn):''};
+        await setDoc(doc(db,'staff',id),data);
+        state.staff.push(Object.assign({id:id},data));
+        if(!state.sel) state.sel=id;
+        toast(nm+' added.'); render();
+      }catch(e){ toast(fbErr(e)); } break;
+    case 'delstaff':
+      if(confirmDel!==el.dataset.id){ confirmDel=el.dataset.id; render(); return; }
+      try{
+        await deleteDoc(doc(db,'staff',confirmDel));
+        state.staff=state.staff.filter(function(s){return s.id!==confirmDel;});
+        if(state.sel===confirmDel) state.sel=state.staff[0]?state.staff[0].id:'';
+        confirmDel=null; toast('Staff member removed. Old attendance is kept.'); render();
+      }catch(e){ toast(fbErr(e)); } break;
+    case 'setshop':
+      toast('Reading location…');
+      try{
+        var p=await getPos(); S.lat=p.lat; S.lng=p.lng;
+        await setDoc(doc(db,'settings','main'),S); toast('Shop location saved (±'+p.acc+' m).'); render();
+      }catch(e){ toast(e&&e.code&&String(e.code).indexOf('-')>0?fbErr(e):errMsg(e)); } break;
+    case 'export':
+      var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv()],{type:'text/csv;charset=utf-8'}));
+      a.download='dream-pharma-attendance-'+vm.y+'-'+pad(vm.m)+'.csv'; document.body.appendChild(a); a.click(); a.remove(); break;
+    case 'salcsv': download('dream-pharma-salary-'+vm.y+'-'+pad(vm.m)+'.csv',salaryCsv()); break;
+    case 'print': window.print(); break;
+    case 'zoom':
+      var r=state.records.filter(function(x){return x.id===el.dataset.rid;})[0];
+      if(r&&r[el.dataset.w+'Photo']){ document.getElementById('lbImg').src=r[el.dataset.w+'Photo']; document.getElementById('lb').hidden=false; } break;
+  }
+}
+document.addEventListener('click',function(e){
+  if(e.target.closest('#lb')){ document.getElementById('lb').hidden=true; return; }
+  var t=e.target.closest('[data-act]'); if(t&&!t.disabled) act(t.dataset.act,t);
+});
+document.addEventListener('change',async function(e){
+  var t=e.target;
+  if(t.id==='cam'){ onPhoto(t); return; }
+  if(t.id==='staffSel'){
+    state.sel=t.value; try{ localStorage.setItem('dp.sel',state.sel); }catch(x){}
+    pending=null; ensureLoaded(); return;
+  }
+  if(t.dataset&&t.dataset.sal&&isAdmin){
+    var sid0=t.dataset.sal, sv=Math.max(0,Number(t.value)||0);
+    try{ await updateDoc(doc(db,'staff',sid0),{salary:sv}); var s0=staffById(sid0); if(s0) s0.salary=sv; toast('Salary saved.'); }catch(x){ toast(fbErr(x)); }
+    return;
+  }
+  if(t.dataset&&t.dataset.adj&&isAdmin){
+    var pr=t.dataset.adj.split('|'), sid1=pr[0], fld=pr[1], ym=vm.y+'-'+pad(vm.m);
+    var val=(fld==='note')?t.value.trim():Math.max(0,Number(t.value)||0);
+    var ad=state.adj[sid1]||{ym:ym,sid:sid1}; ad[fld]=val; state.adj[sid1]=ad;
+    try{ var pl={ym:ym,sid:sid1}; pl[fld]=val; await setDoc(doc(db,'adjust',ym+'_'+sid1),pl,{merge:true}); toast('Saved.'); render(); }catch(x){ toast(fbErr(x)); }
+    return;
+  }
+  if(t.dataset&&t.dataset.set&&isAdmin){
+    var k=t.dataset.set, v=(t.type==='checkbox')?t.checked:(t.type==='number'?Number(t.value):t.value);
+    if(k==='off') v=Number(v);
+    if((k==='radius'||k==='grace'||k==='lateCutEvery')&&!(v>=0)) v=0;
+    S[k]=v;
+    try{ await setDoc(doc(db,'settings','main'),S); toast('Saved.'); }catch(x){ toast(fbErr(x)); }
+  }
+});
+
+/* ---------- start ---------- */
+var t0=nowParts(); vm.y=t0.y; vm.m=t0.m;
+var lastDate=t0.date;
+render();
+setInterval(function(){
+  var c=document.getElementById('clock'); if(c) c.textContent=clockStr();
+  var d=nowParts().date;
+  if(d!==lastDate){ lastDate=d; goCurrentMonth(); if(!pending) ensureLoaded(); }
+},20000);
+
+if(configured){
+  app=initializeApp(FIREBASE_CONFIG); auth=getAuth(app); db=getFirestore(app);
+  onAuthStateChanged(auth,async function(user){
+    if(!user){ try{ await signInAnonymously(auth); }catch(e){ document.getElementById('view').innerHTML='<div class="card notice">Could not connect ('+esc((e&&e.code)||'unknown')+'). Check that Anonymous sign-in is on and the Firebase config is correct.</div>'; } return; }
+    isAdmin=!user.isAnonymous; ready=false; loadedKey=''; render();
+    try{ await loadMeta(); ready=true; goCurrentMonth(); await loadRecords(); }
+    catch(e){ document.getElementById('view').innerHTML='<div class="card notice">'+esc(fbErr(e))+' ('+esc((e&&e.code)||'')+')</div>'; }
+  });
+}
+</script>
+</body>
+</html>
