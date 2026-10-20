@@ -16,6 +16,7 @@
   --brand:#0A7F5F; --brand-ink:#FFFFFF; --brand-soft:#D7F0E5;
   --hero1:#064A3A; --hero2:#0B8A67;
   --out1:#B8550A; --out2:#D77412;
+  --lv:#2457A6; --lv-bg:#DCE7FA;
   --ok:#0F7A46; --ok-bg:#DDF3E5; --late:#8A5200; --late-bg:#FCEACB; --bad:#B3302B; --bad-bg:#FBE0DC;
   --nav:rgba(255,255,255,.9); --shadow:0 1px 2px rgba(13,31,26,.05),0 10px 28px rgba(13,31,26,.08);
   --avs:45%; --avl:88%; --avt:24%;
@@ -28,6 +29,7 @@
     --brand:#34C39C; --brand-ink:#04211A; --brand-soft:#153A30;
     --hero1:#083F32; --hero2:#0E7459;
     --out1:#B8550A; --out2:#D77412;
+    --lv:#8DB4F0; --lv-bg:#182742;
     --ok:#5BD48B; --ok-bg:#15321F; --late:#F0B857; --late-bg:#3A2C10; --bad:#F28B82; --bad-bg:#3C1B19;
     --nav:rgba(19,30,25,.9); --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
     --avs:30%; --avl:22%; --avt:82%;
@@ -65,7 +67,7 @@ a{color:var(--brand); font-weight:600}
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Cpath d='M28 22v12M22 28h12' stroke='white' stroke-opacity='.09' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"),
     linear-gradient(145deg,var(--hero1),var(--hero2));
   box-shadow:var(--shadow); display:flex; flex-direction:column; gap:4px}
-.hero-top{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.hero-top{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
 .hero .eyebrow{display:flex; align-items:center; gap:7px; opacity:.92}
 .mark{width:20px; height:20px; border-radius:7px; background:#fff; color:var(--hero1); display:inline-flex; align-items:center; justify-content:center}
 .mark svg{width:13px; height:13px}
@@ -128,18 +130,20 @@ input[type=checkbox]{width:22px; height:22px; min-height:0; accent-color:var(--b
 .donering svg{width:52px; height:52px}
 
 /* stat tiles */
-.tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.tile{border-radius:20px; padding:14px 16px; background:var(--surface); border:1px solid var(--line); min-width:0}
-.tile b{display:block; font-size:34px; line-height:1; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
-.tile span{display:block; margin-top:8px; font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; opacity:.85}
+.tiles{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.tile{border-radius:18px; padding:12px 12px; background:var(--surface); border:1px solid var(--line); min-width:0}
+.tile b{display:block; font-size:30px; line-height:1; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.tile span{display:block; margin-top:8px; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; opacity:.85}
 .tile.ok{background:var(--ok-bg); color:var(--ok); border-color:transparent}
 .tile.late{background:var(--late-bg); color:var(--late); border-color:transparent}
 .tile.bad{background:var(--bad-bg); color:var(--bad); border-color:transparent}
+.tile.lv{background:var(--lv-bg); color:var(--lv); border-color:transparent}
 
 .chip{display:inline-flex; align-items:center; padding:4px 11px; border-radius:99px; font-size:12px; font-weight:700; white-space:nowrap; background:var(--surface2); color:var(--muted)}
 .chip.ok{background:var(--ok-bg); color:var(--ok)}
 .chip.late{background:var(--late-bg); color:var(--late)}
 .chip.bad{background:var(--bad-bg); color:var(--bad)}
+.chip.lv{background:var(--lv-bg); color:var(--lv)}
 .chips{display:flex; flex-wrap:wrap; gap:6px}
 .chips.center{justify-content:center}
 .preview img{width:100%; max-height:320px; object-fit:cover; border-radius:18px; display:block; background:var(--surface2)}
@@ -167,6 +171,7 @@ th:first-child,td:first-child{text-align:left; white-space:normal}
 th{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700}
 tr:last-child td{border-bottom:0}
 
+.staffbox{border:1.5px solid var(--line); border-radius:18px; padding:12px; display:flex; flex-direction:column; gap:12px}
 .staffrow{display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line)}
 .staffrow:first-child{border-top:0}
 .staffrow .btn{width:auto; min-height:40px; font-size:13px; padding:0 14px; box-shadow:none}
@@ -222,7 +227,7 @@ var DEFAULTS={place:'Dream Pharma, Kishoreganj Sadar',lat:null,lng:null,radius:1
 var configured=FIREBASE_CONFIG.apiKey.indexOf('PASTE')!==0;
 var app,auth,db;
 
-var state={sel:'',staff:[],records:[],adj:{}};
+var state={sel:'',staff:[],records:[],adj:{},leave:{}};
 try{ state.sel=localStorage.getItem('dp.sel')||''; }catch(e){}
 var S=Object.assign({},DEFAULTS);
 
@@ -268,19 +273,26 @@ function fbErr(e){
   return 'Something went wrong. Try again.';
 }
 
+var DAYN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function offDay(st){ return (!st||st.weekOff==null||st.weekOff==='')?Number(S.off):Number(st.weekOff); }
+function dutyOpen(st){ return (st&&st.dutyStart)||S.open; }
+function dutyClose(st){ return (st&&st.dutyEnd)||''; }
+function leaveOf(sid,date){ return state.leave[sid+'_'+date]||null; }
 function monthStats(sid,y,m){
-  var t=nowParts(), last=daysIn(y,m);
+  var st=staffById(sid), off=offDay(st), t=nowParts(), last=daysIn(y,m);
   var cur=(y===t.y&&m===t.m), future=(y>t.y||(y===t.y&&m>t.m));
   var upto=future?0:(cur?t.d:last);
-  var work=0,present=0,late=0,lateMin=0,absent=0;
+  var work=0,present=0,late=0,lateMin=0,absent=0,pl=0,ul=0;
   for(var d=1;d<=upto;d++){
-    var off=(dow(y,m,d)===+S.off), r=rec(sid,ymd(y,m,d));
+    var date=ymd(y,m,d), r=rec(sid,date), lv=leaveOf(sid,date);
     if(r){ present++; if(r.late){late++; lateMin+=r.lateMin||0;} }
-    if(off) continue;
+    if(dow(y,m,d)===off) continue;
     work++;
-    if(!r && !(cur&&d===t.d)) absent++;
+    if(!r && !(cur&&d===t.d)){
+      if(lv){ if(lv.type==='unpaid') ul++; else pl++; } else absent++;
+    }
   }
-  return {work:work,present:present,late:late,lateMin:lateMin,absent:absent,upto:upto};
+  return {work:work,present:present,late:late,lateMin:lateMin,absent:absent,paidLeave:pl,unpaidLeave:ul,leave:pl+ul,upto:upto};
 }
 
 /* ---------- Firebase data ---------- */
@@ -298,18 +310,22 @@ async function loadRecords(){
   var key=y+'-'+m+'-'+(isAdmin?'*':(st?st.id:''));
   loadedKey=key; loading=true; render();
   try{
-    var recs=[], adjMap={};
+    var recs=[], adjMap={}, lvMap={};
     if(isAdmin){
+      var lsn=await getDocs(query(collection(db,'leave'),where('date','>=',ymd(y,m,1)),where('date','<=',ymd(y,m,last))));
+      lsn.forEach(function(d){ var v=d.data(); lvMap[v.sid+'_'+v.date]=Object.assign({id:d.id},v); });
       var asn=await getDocs(query(collection(db,'adjust'),where('ym','==',y+'-'+pad(m))));
       asn.forEach(function(d){ var v=d.data(); adjMap[v.sid]=v; });
       var snap=await getDocs(query(collection(db,'attendance'),where('date','>=',ymd(y,m,1)),where('date','<=',ymd(y,m,last))));
       snap.forEach(function(d){ recs.push(Object.assign({id:d.id},d.data())); });
     }else if(st){
-      var upto=(y===t.y&&m===t.m)?t.d:((y<t.y||(y===t.y&&m<t.m))?last:0), ps=[];
-      for(var d=1;d<=upto;d++) ps.push(getDoc(doc(db,'attendance',ymd(y,m,d)+'_'+st.id)));
-      (await Promise.all(ps)).forEach(function(s){ if(s.exists()) recs.push(Object.assign({id:s.id},s.data())); });
+      /* staff only ever read today's own record and leave */
+      var ar=await getDoc(doc(db,'attendance',t.date+'_'+st.id));
+      if(ar.exists()) recs.push(Object.assign({id:ar.id},ar.data()));
+      var lr=await getDoc(doc(db,'leave',st.id+'_'+t.date));
+      if(lr.exists()){ var lvv=lr.data(); lvMap[lvv.sid+'_'+lvv.date]=Object.assign({id:lr.id},lvv); }
     }
-    if(loadedKey===key){ state.records=recs; state.adj=adjMap; }
+    if(loadedKey===key){ state.records=recs; state.adj=adjMap; state.leave=lvMap; }
   }catch(e){ toast(fbErr(e)); }
   loading=false; render();
 }
@@ -383,7 +399,7 @@ async function submit(){
     if(p.kind==='in'){
       var ex=await getDoc(doc(db,'attendance',id));
       if(ex.exists()){ pending=null; toast('Already checked in today.'); await loadRecords(); return; }
-      var open=toMin(S.open), mins=minsOf(iso), isLate=mins>open+Number(S.grace||0);
+      var open=toMin(dutyOpen(st)), mins=minsOf(iso), isLate=mins>open+Number(S.grace||0);
       var r={sid:st.id,date:date,inAt:iso,inPhoto:p.photo,inLoc:loc,late:isLate,lateMin:isLate?mins-open:0,outAt:null,outPhoto:null,outLoc:null};
       await setDoc(doc(db,'attendance',id),Object.assign({serverAt:serverTimestamp()},r));
       state.records.push(Object.assign({id:id},r));
@@ -411,6 +427,7 @@ var IC={
 };
 function ic(n){ return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[n]+'</svg>'; }
 var TABS=[{id:'home',label:'Check in',ic:'cam'},{id:'details',label:'Details',ic:'list'},{id:'summary',label:'Summary',ic:'chart'},{id:'salary',label:'Salary',ic:'coin'},{id:'settings',label:'Settings',ic:'gear'}];
+function tabsFor(){ return isAdmin?TABS:[TABS[0],{id:'settings',label:'Admin',ic:'gear'}]; }
 function clockStr(){ return new Date().toLocaleTimeString('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}); }
 
 var TITLES={details:'Daily details',summary:'Summary',salary:'Salary sheet',settings:'Settings'};
@@ -444,8 +461,20 @@ function tiles(st,y,m){
   return '<div class="tiles">'+
     '<div class="tile"><b>'+s.work+'</b><span>Working days</span></div>'+
     '<div class="tile ok"><b>'+s.present+'</b><span>Present</span></div>'+
+    '<div class="tile bad"><b>'+s.absent+'</b><span>Absent</span></div>'+
     '<div class="tile late"><b>'+s.late+'</b><span>Late</span></div>'+
-    '<div class="tile bad"><b>'+s.absent+'</b><span>Absent</span></div></div>';
+    '<div class="tile lv"><b>'+s.leave+'</b><span>Leave</span></div>'+
+    '<div class="tile"><b>'+s.lateMin+'</b><span>Late min</span></div></div>';
+}
+function dutyLine(st){
+  var o=offDay(st), c=dutyClose(st);
+  return 'Duty '+hhmm12(toMin(dutyOpen(st)))+(c?' – '+hhmm12(toMin(c)):'')+' · '+((o>=0&&o<=6)?'Off on '+DAYN[o]:'No weekly off');
+}
+function dayChips(st){
+  var t=nowParts(), lv=leaveOf(st.id,t.date), h='';
+  if(dow(t.y,t.m,t.d)===offDay(st)) h+='<span class="chip lv">Weekly off today</span>';
+  if(lv) h+='<span class="chip lv">'+(lv.type==='unpaid'?'Unpaid leave today':'Paid leave today')+'</span>';
+  return h?'<div class="chips center">'+h+'</div>':'';
 }
 function locChip(loc){
   if(!loc) return '<span class="chip late">No location</span>';
@@ -453,7 +482,7 @@ function locChip(loc){
   if(loc.d>Number(S.radius)) return '<span class="chip bad">Outside shop · '+loc.d+' m</span>';
   return '<span class="chip ok">At shop · '+loc.d+' m</span>';
 }
-function graceStr(){ return hhmm12(toMin(S.open)+Number(S.grace||0)); }
+function graceStr(st){ return hhmm12(toMin(dutyOpen(st))+Number(S.grace||0)); }
 
 function setupCard(){
   return '<section class="card stack"><h2>One setup step left</h2><div class="muted">Open this file in a text editor and paste your Firebase web app config near the top (the block marked PASTE YOUR FIREBASE CONFIG HERE). Then upload it again.</div></section>';
@@ -472,8 +501,8 @@ function punchCard(st,r){
   if(loading){
     h+='<div class="muted">Loading today…</div>';
   }else if(!r){
-    h+=pin+'<button class="punch" data-act="start" data-kind="in">'+ic('cam')+'<span>Check in</span></button>'+
-      '<div class="punch-note"><strong>Shift starts '+hhmm12(toMin(S.open))+'</strong><span class="muted small">On time until '+graceStr()+'</span></div>';
+    h+=dayChips(st)+pin+'<button class="punch" data-act="start" data-kind="in">'+ic('cam')+'<span>Check in</span></button>'+
+      '<div class="punch-note"><strong>'+esc(dutyLine(st))+'</strong><span class="muted small">On time until '+graceStr(st)+'</span></div>';
   }else if(!r.outAt){
     h+='<div class="chips center"><span class="chip '+(r.late?'late':'ok')+'">'+(r.late?'Late '+r.lateMin+' min':'On time')+'</span>'+locChip(r.inLoc)+'</div>'+pin+
       '<button class="punch out" data-act="start" data-kind="out">'+ic('cam')+'<span>Check out</span></button>'+
@@ -511,7 +540,7 @@ function viewHome(){
   }
 
   out+=punchCard(st,r);
-  out+='<div class="sec">'+esc(fmtMonth(t.y,t.m))+'<span>so far</span></div>'+tiles(st,t.y,t.m);
+  if(isAdmin) out+='<div class="sec">'+esc(fmtMonth(t.y,t.m))+'<span>so far</span></div>'+tiles(st,t.y,t.m);
   return out;
 }
 
@@ -526,19 +555,23 @@ function thumb(r,w){
 function mapLink(loc){ return loc?'<a href="https://www.google.com/maps?q='+loc.lat+','+loc.lng+'" target="_blank" rel="noopener">Map</a>':''; }
 
 function viewDetails(){
+  if(!isAdmin) return loginCard();
   var st=curStaff();
   if(!st) return '<div class="card">No staff yet. The admin can add staff in Settings.</div>';
-  var s=monthStats(st.id,vm.y,vm.m), out=monthNav()+tiles(st,vm.y,vm.m), tn=nowParts();
+  var s=monthStats(st.id,vm.y,vm.m), out=monthNav()+tiles(st,vm.y,vm.m)+'<div class="muted small" style="text-align:center">'+esc(dutyLine(st))+'</div>', tn=nowParts();
   if(loading) return out+'<div class="card muted">Loading…</div>';
   var rows='';
   for(var d=s.upto; d>=1; d--){
-    var date=ymd(vm.y,vm.m,d), r=rec(st.id,date), off=(dow(vm.y,vm.m,d)===+S.off);
+    var date=ymd(vm.y,vm.m,d), r=rec(st.id,date), off=(dow(vm.y,vm.m,d)===offDay(st)), lv=leaveOf(st.id,date);
     var dt=new Date(Date.UTC(vm.y,vm.m-1,d)), wk=dt.toLocaleDateString('en-GB',{timeZone:'UTC',weekday:'short'});
     var day='<div class="day"><b>'+d+'</b><small>'+wk+'</small></div>';
     if(r){
-      rows+='<div class="rec">'+day+'<div class="stack" style="gap:6px"><div class="mono small">In '+fmtTime(r.inAt)+' · Out '+(r.outAt?fmtTime(r.outAt):'—')+'</div><div class="chips"><span class="chip '+(r.late?'late':'ok')+'">'+(r.late?'Late '+r.lateMin+' min':'On time')+'</span>'+locChip(r.inLoc)+'</div><div class="small">'+mapLink(r.inLoc)+'</div></div><div class="thumbs">'+thumb(r,'in')+thumb(r,'out')+'</div></div>';
+      var early=(r.outAt&&dutyClose(st)&&minsOf(r.outAt)<toMin(dutyClose(st)));
+      rows+='<div class="rec">'+day+'<div class="stack" style="gap:6px"><div class="mono small">In '+fmtTime(r.inAt)+' · Out '+(r.outAt?fmtTime(r.outAt):'—')+'</div><div class="chips"><span class="chip '+(r.late?'late':'ok')+'">'+(r.late?'Late '+r.lateMin+' min':'On time')+'</span>'+(early?'<span class="chip late">Left early</span>':'')+locChip(r.inLoc)+'</div><div class="small">'+mapLink(r.inLoc)+'</div></div><div class="thumbs">'+thumb(r,'in')+thumb(r,'out')+'</div></div>';
     }else if(off){
       rows+='<div class="rec absent">'+day+'<div class="muted small">Weekly off</div><span></span></div>';
+    }else if(lv){
+      rows+='<div class="rec">'+day+'<div><span class="chip lv">'+(lv.type==='unpaid'?'Unpaid leave':'Paid leave')+'</span></div><span></span></div>';
     }else if(vm.y===tn.y&&vm.m===tn.m&&d===tn.d){
       rows+='<div class="rec">'+day+'<div class="muted small">Today, not checked in yet</div><span></span></div>';
     }else{
@@ -564,9 +597,9 @@ function viewSummary(){
   }
   var body=state.staff.map(function(s){
     var m=monthStats(s.id,vm.y,vm.m);
-    return '<tr><td><strong>'+esc(s.name)+'</strong></td><td>'+m.work+'</td><td>'+m.present+'</td><td>'+m.late+'</td><td>'+m.absent+'</td><td>'+m.lateMin+'</td></tr>';
+    return '<tr><td><strong>'+esc(s.name)+'</strong></td><td>'+m.work+'</td><td>'+m.present+'</td><td>'+m.late+'</td><td>'+m.leave+'</td><td>'+m.absent+'</td><td>'+m.lateMin+'</td></tr>';
   }).join('');
-  out+=monthNav()+'<section class="card"><div class="tablewrap"><table><thead><tr><th>Staff</th><th>Days</th><th>Present</th><th>Late</th><th>Absent</th><th>Late min</th></tr></thead><tbody>'+body+'</tbody></table></div></section>';
+  out+=monthNav()+'<section class="card"><div class="tablewrap"><table><thead><tr><th>Staff</th><th>Days</th><th>Present</th><th>Late</th><th>Leave</th><th>Absent</th><th>Late min</th></tr></thead><tbody>'+body+'</tbody></table></div></section>';
   return out;
 }
 
@@ -575,25 +608,48 @@ function viewSettings(){
   var shop=(S.lat!=null)?'<div class="mono small">'+S.lat.toFixed(5)+', '+S.lng.toFixed(5)+' · <a href="https://www.google.com/maps?q='+S.lat+','+S.lng+'" target="_blank" rel="noopener">Open map</a></div>':'<div class="muted small">Not set yet. Stand inside the shop and tap the button.</div>';
   var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(function(n,i){ return '<option value="'+i+'"'+(i===+S.off?' selected':'')+'>'+n+'</option>'; }).join('');
   var o='';
-  o+='<section class="card stack"><h2>Shop and rules</h2>'+
+  o+='<section class="card stack"><h2>Shop and rules</h2><div class="muted small">Each staff member can have their own duty time and weekly off below. The default duty start and weekly off apply to staff without their own.</div>'+
     '<div class="field"><label for="f-place">Shop name</label><input id="f-place" data-set="place" value="'+esc(S.place)+'"></div>'+
     shop+'<button class="btn small" data-act="setshop">Use my current location as the shop</button>'+
     '<div class="row2"><div class="field"><label for="f-radius">Allowed radius (m)</label><input id="f-radius" type="number" min="10" step="10" data-set="radius" value="'+esc(S.radius)+'"></div>'+
-    '<div class="field"><label for="f-open">Shift starts</label><input id="f-open" type="time" data-set="open" value="'+esc(S.open)+'"></div></div>'+
+    '<div class="field"><label for="f-open">Default duty start</label><input id="f-open" type="time" data-set="open" value="'+esc(S.open)+'"></div></div>'+
     '<div class="row2"><div class="field"><label for="f-grace">Grace (min)</label><input id="f-grace" type="number" min="0" step="5" data-set="grace" value="'+esc(S.grace)+'"></div>'+
-    '<div class="field"><label for="f-off">Weekly off</label><select id="f-off" data-set="off">'+days+'</select></div></div>'+
+    '<div class="field"><label for="f-off">Default weekly off</label><select id="f-off" data-set="off">'+days+'</select></div></div>'+
     '<div class="field"><label for="f-latecut">Late days that cost 1 day of pay (0 = off)</label><input id="f-latecut" type="number" min="0" step="1" data-set="lateCutEvery" value="'+esc(S.lateCutEvery)+'"></div>'+
     '<label class="check"><input type="checkbox" id="f-needloc" data-set="needLoc"'+(S.needLoc?' checked':'')+'><span>Require location to check in<br><span class="muted small">Staff cannot submit without a GPS fix.</span></span></label></section>';
 
+  function offOpts(v){
+    var o='<option value=""'+((v==null||v==='')?' selected':'')+'>Shop default</option><option value="-1"'+(String(v)==='-1'?' selected':'')+'>No weekly off</option>';
+    DAYN.forEach(function(n,i){ o+='<option value="'+i+'"'+(String(v)===String(i)?' selected':'')+'>'+n+'</option>'; });
+    return o;
+  }
   var list=state.staff.map(function(s){
-    var armed=(confirmDel===s.id);
-    return '<div class="staffrow" style="flex-wrap:wrap">'+avatar(s.name)+'<div class="grow"><strong>'+esc(s.name)+'</strong><div class="muted small">'+esc(s.role)+(s.pinHash?' · PIN set':'')+'</div></div><button class="btn '+(armed?'danger':'ghost')+'" data-act="delstaff" data-id="'+esc(s.id)+'">'+(armed?'Tap to confirm':'Remove')+'</button><div class="field" style="flex-basis:100%"><label for="sal-'+esc(s.id)+'">Monthly salary (৳)</label><input id="sal-'+esc(s.id)+'" type="number" min="0" step="100" inputmode="numeric" data-sal="'+esc(s.id)+'" value="'+esc(s.salary||'')+'"></div></div>';
+    var armed=(confirmDel===s.id), id=esc(s.id);
+    return '<div class="staffbox"><div class="staffrow" style="padding:0;border:0">'+avatar(s.name)+'<div class="grow"><strong>'+esc(s.name)+'</strong><div class="muted small">'+esc(s.role)+(s.pinHash?' · PIN set':'')+'</div></div><button class="btn '+(armed?'danger':'ghost')+'" data-act="delstaff" data-id="'+id+'">'+(armed?'Tap to confirm':'Remove')+'</button></div>'+
+      '<div class="row2"><div class="field"><label for="so-'+id+'">Weekly off</label><select id="so-'+id+'" data-sf="'+id+'|weekOff">'+offOpts(s.weekOff)+'</select></div>'+
+      '<div class="field"><label for="sal-'+id+'">Monthly salary (৳)</label><input id="sal-'+id+'" type="number" min="0" step="100" inputmode="numeric" data-sal="'+id+'" value="'+esc(s.salary||'')+'"></div></div>'+
+      '<div class="row2"><div class="field"><label for="ds-'+id+'">Duty start</label><input id="ds-'+id+'" type="time" data-sf="'+id+'|dutyStart" value="'+esc(s.dutyStart||'')+'"></div>'+
+      '<div class="field"><label for="de-'+id+'">Duty end</label><input id="de-'+id+'" type="time" data-sf="'+id+'|dutyEnd" value="'+esc(s.dutyEnd||'')+'"></div></div></div>';
   }).join('');
-  o+='<section class="card stack"><h2>Staff</h2><div>'+(list||'<div class="muted">No staff yet. Add your first team member below.</div>')+'</div>'+
+  o+='<section class="card stack"><h2>Staff</h2><div class="stack">'+(list||'<div class="muted">No staff yet. Add your first team member below.</div>')+'</div>'+
     '<div class="field"><label for="newName">Name</label><input id="newName" autocomplete="off"></div>'+
     '<div class="row2"><div class="field"><label for="newRole">Role</label><input id="newRole" autocomplete="off"></div><div class="field"><label for="newPin">PIN (optional)</label><input id="newPin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-lpignore="true" class="pinbox"></div></div>'+
     '<div class="field"><label for="newSal">Monthly salary (৳)</label><input id="newSal" type="number" min="0" step="100" inputmode="numeric"></div>'+
     '<button class="btn small" data-act="addstaff">Add staff member</button></section>';
+
+  var todayS=nowParts().date;
+  var staffOpts=state.staff.map(function(s){ return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'; }).join('');
+  var lvRows=Object.keys(state.leave).map(function(k){ return state.leave[k]; }).sort(function(a,b){ return a.date<b.date?1:-1; }).map(function(l){
+    var s=staffById(l.sid), dt=new Date(l.date+'T00:00:00Z');
+    return '<div class="staffrow">'+avatar(s?s.name:'?')+'<div class="grow"><strong>'+esc(s?s.name:'(removed)')+'</strong><div class="muted small">'+dt.toLocaleDateString('en-GB',{timeZone:'UTC',weekday:'short',day:'numeric',month:'short'})+' · '+(l.type==='unpaid'?'Unpaid':'Paid')+'</div></div><button class="btn ghost" data-act="dellv" data-id="'+esc(l.id)+'">Remove</button></div>';
+  }).join('');
+  o+='<section class="card stack"><h2>Give leave</h2><div class="muted small">Leave days are not counted as absent. Paid leave keeps full pay. Unpaid leave is cut like an absent day. Past dates work too.</div>'+
+    (state.staff.length?
+    '<div class="field"><label for="lv-staff">Staff</label><select id="lv-staff">'+staffOpts+'</select></div>'+
+    '<div class="row2"><div class="field"><label for="lv-from">From</label><input id="lv-from" type="date" value="'+todayS+'"></div><div class="field"><label for="lv-to">To</label><input id="lv-to" type="date" value="'+todayS+'"></div></div>'+
+    '<div class="field"><label for="lv-type">Type</label><select id="lv-type"><option value="paid">Paid leave</option><option value="unpaid">Unpaid leave</option></select></div>'+
+    '<button class="btn small" data-act="addlv">Give leave</button>':'<div class="muted">Add staff first.</div>')+
+    '<div class="sec">'+esc(fmtMonth(vm.y,vm.m))+'<span>leave list</span></div><div>'+(lvRows||'<div class="muted">No leave given this month.</div>')+'</div></section>';
 
   o+='<section class="card stack"><h2>Data</h2><div class="muted small">Showing '+esc(fmtMonth(vm.y,vm.m))+'. Use the month arrows in Summary to change it.</div>'+
     '<button class="btn small" data-act="export">Export this month (CSV)</button>'+
@@ -603,13 +659,13 @@ function viewSettings(){
 
 function money(n){ return '৳'+Math.round(n).toLocaleString('en-US'); }
 function trow(a,b){ return '<tr><td>'+a+'</td><td>'+b+'</td></tr>'; }
-function workDaysFull(y,m){ var n=0,l=daysIn(y,m); for(var d=1;d<=l;d++) if(dow(y,m,d)!==+S.off) n++; return n||1; }
+function workDaysFull(y,m,st){ var n=0,l=daysIn(y,m),off=offDay(st); for(var d=1;d<=l;d++) if(dow(y,m,d)!==off) n++; return n||1; }
 function pay(st,y,m){
-  var ms=monthStats(st.id,y,m), base=Number(st.salary)||0, wd=workDaysFull(y,m), daily=base/wd;
+  var ms=monthStats(st.id,y,m), base=Number(st.salary)||0, wd=workDaysFull(y,m,st), daily=base/wd;
   var every=Number(S.lateCutEvery)||0, lateDays=every?Math.floor(ms.late/every):0;
   var a=state.adj[st.id]||{}, bonus=Number(a.bonus)||0, adv=Number(a.advance)||0;
-  var absentCut=ms.absent*daily, lateCut=lateDays*daily;
-  return {ms:ms,base:base,wd:wd,daily:daily,lateDays:lateDays,absentCut:absentCut,lateCut:lateCut,bonus:bonus,adv:adv,note:a.note||'',net:Math.max(0,base-absentCut-lateCut+bonus-adv)};
+  var absentCut=ms.absent*daily, unpaidCut=ms.unpaidLeave*daily, lateCut=lateDays*daily;
+  return {ms:ms,base:base,wd:wd,daily:daily,lateDays:lateDays,absentCut:absentCut,unpaidCut:unpaidCut,lateCut:lateCut,bonus:bonus,adv:adv,note:a.note||'',net:Math.max(0,base-absentCut-unpaidCut-lateCut+bonus-adv)};
 }
 function viewSalary(){
   if(!isAdmin) return loginCard();
@@ -625,7 +681,9 @@ function viewSalary(){
       trow('Monthly salary',money(p.base))+
       trow('Per day ('+p.wd+' working days)',money(p.daily))+
       trow('Present / Late / Absent',p.ms.present+' / '+p.ms.late+' / '+p.ms.absent)+
+      trow('Leave (paid / unpaid)',p.ms.paidLeave+' / '+p.ms.unpaidLeave)+
       trow('Absent cut ('+p.ms.absent+' day)','− '+money(p.absentCut))+
+      trow('Unpaid leave cut ('+p.ms.unpaidLeave+' day)','− '+money(p.unpaidCut))+
       trow('Late cut ('+p.lateDays+' day)','− '+money(p.lateCut))+
       trow('Bonus','+ '+money(p.bonus))+
       trow('Advance / other cut','− '+money(p.adv))+
@@ -639,12 +697,12 @@ function viewSalary(){
   var every=Number(S.lateCutEvery)||0;
   return monthNav()+
     '<section class="card stack"><div class="lbl">Total payable · '+esc(fmtMonth(vm.y,vm.m))+'</div><div class="net">'+money(total)+'</div>'+
-    '<div class="muted small">Absent days are cut at one day of pay each'+(every?'; every '+every+' late days cut one more day':'')+'.'+(cur?' This month is still running, so only absences up to today are counted.':'')+'</div>'+
+    '<div class="muted small">Absent days and unpaid leave are cut at one day of pay each, paid leave is not cut'+(every?'; every '+every+' late days cut one more day':'')+'.'+(cur?' This month is still running, so only absences up to today are counted.':'')+'</div>'+
     '<div class="row2 no-print"><button class="btn small" data-act="salcsv">Export CSV</button><button class="btn ghost small" data-act="print">Print</button></div></section>'+cards;
 }
 function salaryCsv(){
-  var rows=[['Staff','Role','Monthly salary','Present','Late','Absent','Absent cut','Late cut','Bonus','Advance / other cut','Net pay','Note']];
-  state.staff.forEach(function(s){ var p=pay(s,vm.y,vm.m); rows.push([s.name,s.role,p.base,p.ms.present,p.ms.late,p.ms.absent,Math.round(p.absentCut),Math.round(p.lateCut),p.bonus,p.adv,Math.round(p.net),p.note]); });
+  var rows=[['Staff','Role','Monthly salary','Present','Late','Paid leave','Unpaid leave','Absent','Absent cut','Unpaid leave cut','Late cut','Bonus','Advance / other cut','Net pay','Note']];
+  state.staff.forEach(function(s){ var p=pay(s,vm.y,vm.m); rows.push([s.name,s.role,p.base,p.ms.present,p.ms.late,p.ms.paidLeave,p.ms.unpaidLeave,p.ms.absent,Math.round(p.absentCut),Math.round(p.unpaidCut),Math.round(p.lateCut),p.bonus,p.adv,Math.round(p.net),p.note]); });
   return '\ufeff'+rows.map(function(r){ return r.map(q).join(','); }).join('\r\n');
 }
 function download(name,text){
@@ -654,6 +712,7 @@ function download(name,text){
 
 function render(){
   var body;
+  if(!isAdmin&&view!=='home'&&view!=='settings') view='settings';
   if(!configured) body=setupCard();
   else if(!ready) body='<div class="card muted">Connecting…</div>';
   else if(view==='home') body=viewHome();
@@ -662,7 +721,9 @@ function render(){
   else if(view==='salary') body=viewSalary();
   else body=viewSettings();
   document.getElementById('view').innerHTML=header()+body;
-  document.getElementById('tabsIn').innerHTML=TABS.map(function(t){
+  var tl=tabsFor();
+  document.getElementById('tabsIn').style.gridTemplateColumns='repeat('+tl.length+',1fr)';
+  document.getElementById('tabsIn').innerHTML=tl.map(function(t){
     return '<button data-act="tab" data-v="'+t.id+'"'+(t.id===view?' aria-current="page"':'')+'>'+ic(t.ic)+'<span>'+t.label+'</span></button>';
   }).join('');
 }
@@ -731,6 +792,19 @@ async function act(name,el){
     case 'export':
       var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv()],{type:'text/csv;charset=utf-8'}));
       a.download='dream-pharma-attendance-'+vm.y+'-'+pad(vm.m)+'.csv'; document.body.appendChild(a); a.click(); a.remove(); break;
+    case 'addlv':
+      var sidl=document.getElementById('lv-staff').value, f1=document.getElementById('lv-from').value, t1=document.getElementById('lv-to').value, ty=document.getElementById('lv-type').value;
+      if(!sidl||!f1||!t1){ toast('Choose a staff member and dates.'); return; }
+      if(t1<f1){ toast('The end date is before the start date.'); return; }
+      var dl=[], cd=new Date(f1+'T00:00:00Z'), ed=new Date(t1+'T00:00:00Z');
+      while(cd<=ed&&dl.length<=62){ dl.push(cd.toISOString().slice(0,10)); cd=new Date(cd.getTime()+86400000); }
+      if(dl.length>62){ toast('Give leave for up to 62 days at a time.'); return; }
+      try{
+        await Promise.all(dl.map(function(dd){ return setDoc(doc(db,'leave',sidl+'_'+dd),{sid:sidl,date:dd,type:ty}); }));
+        loadedKey=''; await loadRecords(); toast('Leave saved for '+dl.length+' day'+(dl.length>1?'s':'')+'.');
+      }catch(e){ toast(fbErr(e)); } break;
+    case 'dellv':
+      try{ await deleteDoc(doc(db,'leave',el.dataset.id)); delete state.leave[el.dataset.id]; toast('Leave removed.'); render(); }catch(e){ toast(fbErr(e)); } break;
     case 'salcsv': download('dream-pharma-salary-'+vm.y+'-'+pad(vm.m)+'.csv',salaryCsv()); break;
     case 'print': window.print(); break;
     case 'zoom':
@@ -759,6 +833,12 @@ document.addEventListener('change',async function(e){
     var val=(fld==='note')?t.value.trim():Math.max(0,Number(t.value)||0);
     var ad=state.adj[sid1]||{ym:ym,sid:sid1}; ad[fld]=val; state.adj[sid1]=ad;
     try{ var pl={ym:ym,sid:sid1}; pl[fld]=val; await setDoc(doc(db,'adjust',ym+'_'+sid1),pl,{merge:true}); toast('Saved.'); render(); }catch(x){ toast(fbErr(x)); }
+    return;
+  }
+  if(t.dataset&&t.dataset.sf&&isAdmin){
+    var pf=t.dataset.sf.split('|'), sidf=pf[0], ff=pf[1], vf=t.value;
+    var valf=(vf==='')?null:(ff==='weekOff'?Number(vf):vf);
+    try{ var pd={}; pd[ff]=valf; await updateDoc(doc(db,'staff',sidf),pd); var sf=staffById(sidf); if(sf) sf[ff]=valf; toast('Saved.'); }catch(x){ toast(fbErr(x)); }
     return;
   }
   if(t.dataset&&t.dataset.set&&isAdmin){
